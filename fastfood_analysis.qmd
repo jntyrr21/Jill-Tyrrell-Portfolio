@@ -1,0 +1,138 @@
+---
+title: "final project"
+author: "Jill Tyrrell"
+format: 
+  html:
+    embed-resources: true
+---
+## Introduction
+The data set I chose includes popular fast food chains, items on their menu, and the nutritional facts of their items. The nutritional facts include calories, fat, carbohydrates, sugar, etc. I will be looking into the healthiest fast food item and healthiest fast food chain according to this data set. 
+
+## Main Question: what is the healiest fast food meal? 
+```{r}
+library(tidyverse)
+library(here)
+fastfood <- read_csv(here("data/fastfood_calories.csv"))
+```
+## ggplot2 and stringr, fct_reorder
+## Comparing Similar Items/Ingredients
+```{r}
+library(ggplot2)
+fastfood <- fastfood |> mutate(item = str_to_lower(item))
+
+burgers <- fastfood |> filter(str_detect(item, pattern = "burger" ) == TRUE) |>
+  group_by(restaurant) |>
+  mutate(burger_avg_cals = mean(calories)) 
+
+## average calories in burger items per restaurant
+ggplot(data = burgers, aes(x = restaurant, y = burger_avg_cals)) +
+  geom_col() + 
+  coord_flip() +
+  theme_minimal()
+```
+## dplyr
+## finding the highest and lowest calorie food on each menu
+```{r}
+highest_cal_items <- fastfood |> 
+  group_by(restaurant) |>
+  filter(calories == max(calories)) |>
+  select(calories, restaurant, item)
+
+
+lowest_cal_items <- fastfood |> 
+  group_by(restaurant) |>
+  filter(calories == min(calories)) |>
+  select(calories, restaurant, item)
+
+```
+## finding the average nutrional values for each restaurant
+```{r}
+nutritional_values <- fastfood |>
+  group_by(restaurant) |>
+  summarise(avg_cals = mean(calories),
+            avg_totalfat = mean(total_fat),
+            avg_cholesterol = mean(cholesterol),
+            avg_sodium = mean(sodium),
+            avg_carbs = mean(total_carb),
+            avg_sugar = mean(sugar),
+            avg_protein = mean(protein),
+            avg_calcium = mean(calcium))
+```
+## case_when and factors with forcats
+## labeling calories to high, medium, and low
+```{r}
+library(forcats)
+fastfood1 <- fastfood |> 
+  arrange(desc(calories)) |>
+   mutate(cal_rank =
+                          case_when(calories >= 800 ~ "high",
+                                    calories < 800 & calories >= 300  ~ "medium",
+                                    calories > 300 & calories >= 0 ~ "low")) 
+
+```
+
+## comparing calories and transfat
+```{r}
+cals_v_transfat <- fastfood |>
+  select(calories, trans_fat, restaurant)
+cals_v_transfat
+ggplot(data = cals_v_transfat, aes(x = calories, y = trans_fat)) +
+  geom_point(aes(color = restaurant)) +
+  scale_color_viridis_d() +
+  theme_minimal()
+
+lowest_transfat_item <- fastfood |> 
+  group_by(restaurant) |>
+  filter(trans_fat == min(trans_fat, na.rm = TRUE)) |>
+  select(trans_fat, restaurant, item, sodium)
+
+```
+## calories and sodium
+```{r}
+cals_v_sodium <- fastfood |>
+  select(calories, sodium, restaurant) 
+
+ggplot(data = cals_v_sodium, aes(x = calories, y = sodium)) +
+  geom_point(aes(color = restaurant)) +
+  scale_color_viridis_d() +
+  theme_minimal()
+```
+## sodium and trans_fat
+```{r}
+low_transfat_sodium <- lowest_transfat_item |>
+  filter(sodium == min(sodium, na.rm = TRUE))
+
+ggplot(data = fastfood, aes(x = trans_fat, y = sodium)) +
+  geom_point(aes(color = restaurant)) +
+  scale_color_viridis_d() +
+  theme_minimal()
+```
+
+## health score and healthiest item on each menu
+```{r}
+health <- fastfood |> 
+  mutate(health = calories + sat_fat + trans_fat + cholesterol + sodium + sugar)
+healthiest_item <- health |>
+  filter(health == min(health)) |>
+  select(restaurant, item, health)
+```
+
+## healthiest restaurant
+```{r}
+healthiest_restaurant <- fastfood |>
+  mutate(health = calories + sat_fat + trans_fat + cholesterol + sodium + sugar) |>
+  group_by(restaurant) |>
+  mutate(avg_health = mean(health)) |>
+  select(restaurant, avg_health, health) |>
+  filter(avg_health == min(avg_health)) |> 
+  arrange(avg_health)
+```
+
+## Conclusion
+From my data exploration, I can conclude that the healthiest fast food item from this data set is the side salad from Dairy Queen, by calculating the health score for each item and looking at the lowest. In addition, I can concluded that that the "healthiest" fast food restaurant from this data set is taco bell, due to its low health score average. I can also observe the results in the dot plots comparing calories and trans fat, calories and sodium, and sodium and trans fat. It is a bit difficult to make a very accurate conclusion due to the NA values. In addition, each fast food franchise has a different number of items on their menu. So, in order to find the most accurate conclusions, I needed to find the average of all the numbers, rather than comparing the total. 
+
+## Reflection
+I created graphs to help visualize the data that I wanted to look at. This made it easier for me to see overall trends and form more broad conclusions about the data. Throughout this project, I looked at ggplot and dpylr notes the most. This helped refreshed my memory on how to wrangle the data in order to graph the specific data I wanted to look at. The main finding I would want someone reading my project to come away with is how the different nutrition measurements influence the overall health of items on fast food meals. It is also important for people to see which restaurants are considered to be on the "healthier" side compares to other restaurants. Working with this data, I strengthened my overall understanding of the R studio language. In addition, I was able to learn more about the calories, fats, sugars, and carbohydrates that play a role in the overall health of items on these fast food menus. 
+
+
+
